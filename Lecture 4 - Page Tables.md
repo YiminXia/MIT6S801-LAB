@@ -23,6 +23,10 @@
 
 * how basically multiplex all these address spaces across a single physical memory?-Page Tables
 
-这个图画的很好，github上面的课程翻译关于下面这个图的，要好好看下并抄写，核心思想是每个进程都有自己的mapping（va->pa的映射关系），这个mapping是给MMU或者CPU这些具有地址翻译功能的硬件用的，每个进程的这个mapping也是存在内存里面的，其root address存在每个process的satp寄存器里面，这里很好的印证了之前的思想，process是CPU的抽象。
+这个图画的很好，github上面的课程翻译关于下面这个图的，要好好看下并抄写，核心思想是每个进程都有自己的`mapping（va--->pa的映射关系）`，这个`mapping`是给`MMU`或者`CPU`这些具有地址翻译功能的硬件用的，每个进程的这个`mapping`也是存在内存里面的，其`root address`存在每个`process`的`satp`寄存器里面，这里很好的印证了之前的思想，`process`是`CPU`的抽象。
 
-![image-20220419001304078](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220419001304078.png)
+![image-20220419190658145](.assets/image-20220419190658145.png)
+
+* 虚拟地址到物理地址的换算公式
+
+![image-20220419194311899](.assets/image-20220419194311899.png)
