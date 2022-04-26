@@ -44,3 +44,11 @@
 >**硬件设计人员为啥不直接选择`64bit`作为物理地址，非要选择`56bit`：**
 >
 >Frans教授：选择`56bit`而不是`64bit`是因为在主板上只需要`56`根线。
+
+>**物理页表必须`4K`对齐的原因**
+>
+>这里加一个三级页面转换图，地址转换完全由硬件完成，比如MMU或者CPU
+
+>**转译后备缓存器(Translation Lookaside Buffer TLB是什么**
+>
+>对于OS来说，switch page table 等价于 flush TLB(RISC-V命令是sfence_VMA)
