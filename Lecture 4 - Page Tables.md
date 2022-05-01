@@ -77,3 +77,48 @@ Frans教授：这是个好问题，有好2个原因使得我们必须了解遍�
 
 * 比如`kernel`在执行一条命令时候，发现一个`PTE`是无效的，`HW`会返回给`kernel`一个`page fault`，此时`kernel`可以更新这个`PTE`然后重新执行该命令。
 
+
+
+
+
+
+
+
+
+--------------
+
+## 5 Issues In xv6 TextBook
+
+
+
+### Issues in 3.2 Kernel address space
+
+**issue1:**The kernel gets at RAM and memory-mapped device registers using "direct mapping"that is , mapping the resources at virtual addresses that are equal to the physical address.
+
+
+
+**issue2:**Direct mapping simplifies kernel code that reads or writes physical memory.For example,when fork allocates user memory for the child process,the allocator returns the physical address of that memory;fork uses that address directly as a virtual address when it is copying the parent's user memory to the child.
+
+
+
+**issue3:**a physical page(holding the trampoline code) is mapped twice in the virtual address space of the kernel:once at top of the virtual address space and once with a direct mapping.
+
+### Issues in 3.3 Code:creating an address space
+
+**issue4:**The above code depends on physical memory being direct-mapped into the kernel virtual address space.For example, as walk descends levels of the page table, it pulls the (physical)address of the next-level-down page table from a PTE(kernel/vm.c:80),and then uses that address as a virtual address to fetch the PTE at the next level down
+
+(kernel/vm.c:78).
+
+### Issues in 3.5 Code:Physical memory allocator
+
+**issue5:**Each free page's list element is a `struct run`(kernel/kalloc.c:17).Where does the allocator get the memory to hold thadata structure?It store each free page's `run`structure in the free page itself,since there's nothing else stored there.The free list protected by a spin lock(kernel/kalloc.c:21-24).The list and the lock are wrapped in a struct to make clear that the lock protects the fields in the struct.
+
+**issue6:**xv6 ought to determine how much physical memory is available by parsing configuration information provided by the hardware.Instead xv6 assumes that the machine has 128MB of RAM.`kinit`calls `freerange`to add memory ti the free list via per-page calls to `kfree`
+
+### Issues in 3.6 Process address space
+
+**issue7:**Third, the kernel maps a page with trampoline code at the top of the user address space, thus a single page of physical memory shows up in all address spaces.
+
+**issue8:**The stack is a single page, and is shown with the initial contents as created by exec.Strings containing the command-line arguments, as well as an array of pointers to them, are at the very top of the stack.Just under that are values that allow a program to start at main as if the function `main(argc, argv)`had just been called.
+
+![image-20220501114031846](.assets/image-20220501114031846.png)
