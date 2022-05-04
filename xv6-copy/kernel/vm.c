@@ -117,14 +117,8 @@ walkaddr(pagetable_t pagetable, uint64 va)
     if((*pte & PTE_U) == 0)
         return 0;
 
-    pa = PTE2PA(*pte);
-    return pa;
+    pa = PTE2PA(*pte);// *pte就是一个PTE的实体，PTE2PA就是取出第三级page table的物理页面的root addr,即pa所在页面的root addr,并非pa
 }
-
-
-
-
-
 
 // add a mapping to the kernel page table.
 // only used when booting.
@@ -152,11 +146,11 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     a = PGROUNDDOWN(va);
     last = PGROUNDDOWN(va + size - 1);
     for(;;) {
-        if((pte = walk(pagetable, a, 1)) == 0)
+        if((pte = walk(pagetable, a, 1)) == 0) // walk完成三级页表与相应PTE的创建
             return -1;
         if(*pte & PTE_V)
             panic("mappages: remap");
-        *pte = PA2PTE(pa) | perm | PTE_V;
+        *pte = PA2PTE(pa) | perm | PTE_V; // 第三级page table中PTE的填充，核心内容是pa的root addr
         if(a == last)
             break;
         a += PGSIZE;
@@ -165,6 +159,62 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     return 0;
 }
 
+// Remove npages of mapping starting from va. 
+// va must be page-aligned. The mapping must exist.
+// Optionally free the physical memory
+void
+uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
+{
+    uint64   a;
+    pte_t   *pte;
+
+    if((va % PGSIZE) != 0)
+        panic("uvmunmap: not page-aligned");
+
+    for(a = va; a < va + npages * PGSIZE; a = a + PGSIZE) {
+        if((pte = walk(pagetable, a, 0)) == 0)
+            panic("uvmunmap: walk");
+        if((*pte & PTE_V) == 0)
+            panic("uvmunmap: not mapped");
+        if(PTE_FLAGS(*pte) == PTE_V)
+            panic("uvmunmap: not a leaf"); //为什么只有PTE_V为非叶子节点呢？
+        if(do_free) {
+            uint64 pa = PTE2PA(*pte);
+            kfree((void *)pa);
+        }
+        *pte = 0;
+    }
+
+}
+
+// create an empty user page table.
+// returns 0 if out of memory.
+pagetable_t
+uvmcreate()
+{
+    pagetable_t pagetable;
+    pagetable = (pagetable_t)kalloc();
+    if(pagetable == 0)
+        return 0;
+    memset(pagetable, 0, PGSIZE);
+    return pagetable; //这里返回的是物理页面的root physical address.
+}
+
+// Load the user initcode into address 0 of pagetable.
+// for the very first process.
+// sz must be less than a page.
+void
+uvminit(pagetable_t pagetable, uchar *src, uint sz)
+{
+    char *mem;
+
+    if(sz >= PGSIZE)
+        panic("inituvm: more than a page");
+    mem = kalloc();
+    memset(mem, 0, PGSIZE);
+    mappages(pagetable, 0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X|PTE_U); // 这里的(uint64)入参强转，联系DPDK1911写个总结
+    memmove(mem, src, sz);
+}
 
 // Copy from user to kernel.
 // Copy len bytes to dst from virtual address srcva in a given page table.
