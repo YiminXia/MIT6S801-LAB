@@ -342,23 +342,53 @@ uvmclear(pagetable_t pagetable, uint64 va)
 
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
-// Return 0 on success, -1 on error.
+// Return 0 on success, -1 on error. 从kernel-->user space拷贝数据
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
+    uint64 n, va0, pa0;
 
+    while(len > 0) {
+        va0 = PGROUNDDOWN(dstva); //user space的dstva向下取整得到va0
+        pa0 = walkaddr(pagetable, va0);// 得到va0对应的pa0,这个pagetable入参是user的
+        if(pa0 == 0)
+            return -1;
+        n = PGSIZE - (dstva - va0); // dstva到该页结束位置，还有多少空间，够不够len的
+        if(n > len)
+            n = len;
+        memmove((void *)(pa0 + (dstva - va0)), src, n);
+
+        len = len - n;
+        src = src + n;
+        dstva = va0 + PGSIZE;
+    }
 }
 
 
 
 // Copy from user to kernel.
 // Copy len bytes to dst from virtual address srcva in a given page table.
-// Return 0 on success, -1 on error.
+// Return 0 on success, -1 on error. 从user-->kernel
 int 
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
-    
+    uint64 n, va0, pa0;
 
+    while(len > 0){
+        va0 = PGROUNDDOWN(srcva); // user space源地址srcva的vpagetable
+        pa0 = walkaddr(pagetable, va0);
+        if(pa0 == 0)
+            return -1;
+        n = PGSIZE - (srcva - va0);
+        if(n > len)
+            n = len;
+        memmove((void *)dst, (void *)(pa0+(srcva-va0)), n);
+
+        len = len - n;
+        srcva = srcva + n;
+        dst = dst + n;
+    }
+    return 0;
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -368,6 +398,9 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+    int n, va0, pa0;
+    int got_null = 0;
 
+    
 }
 
